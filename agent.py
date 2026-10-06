@@ -17,6 +17,7 @@ import config
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
 from generate import ModelUnavailable
+import re
 
 
 # ── session state ─────────────────────────────────────────────────────────────
@@ -107,8 +108,98 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     """
     session = new_session(query, wardrobe)
 
-    # TODO: delete these two lines and build the loop.
-    session["error"] = "The planning loop isn't built yet — see the TODO in agent.py."
+    # Parse the user's query.
+    parsed_query = query.strip()
+
+    # Maximum price
+    price_match = re.search(
+        r"(?:under|below|up to|max(?:imum)?)\s*\$?(\d+(?:\.\d+)?)",
+        parsed_query,
+        flags=re.IGNORECASE,
+    )
+
+    max_price = float(price_match.group(1)) if price_match else None
+
+    # Size
+    size_match = re.search(
+        r"(?:in\s+)?size\s+([A-Za-z0-9./]+)",
+        parsed_query,
+        flags=re.IGNORECASE,
+    )
+
+    size = size_match.group(1) if size_match else None
+
+    # Remove the price and size phrases so the remaining text is the description.
+    description = parsed_query
+
+    description = re.sub(
+        r"(?:under|below|up to|max(?:imum)?)\s*\$?\d+(?:\.\d+)?",
+        "",
+        description,
+        flags=re.IGNORECASE,
+    )
+
+    description = re.sub(
+        r"(?:in\s+)?size\s+[A-Za-z0-9./]+",
+        "",
+        description,
+        flags=re.IGNORECASE,
+    )
+
+    description = re.sub(
+        r"^(?:looking for|i want|find me)\s+(?:a\s+|an\s+)?",
+        "",
+        description.strip(),
+        flags=re.IGNORECASE,
+    ).strip()
+
+    session["parsed"] = {
+        "description": description,
+        "size": size,
+        "max_price": max_price,
+    }
+
+    # The loop decides what happens next from the last result.
+    next_step = "search"
+    iterations = 0
+
+    while next_step != "done":
+        iterations += 1
+        trace.check_iterations(iterations)
+
+        if next_step == "search":
+            session["search_results"] = search_listings(
+                session["parsed"]["description"],
+                session["parsed"]["size"],
+                session["parsed"]["max_price"],
+            )
+
+            # Required branch: stop if search found nothing.
+            if not session["search_results"]:
+                session["error"] = (
+                    "I couldn't find a matching listing. Try a broader description, "
+                    "another size, or a higher maximum price."
+                )
+                next_step = "done"
+                continue
+
+            session["selected_item"] = session["search_results"][0]
+            next_step = "outfit"
+
+        elif next_step == "outfit":
+            session["outfit_suggestion"] = suggest_outfit(
+                session["selected_item"],
+                session["wardrobe"],
+            )
+            next_step = "fit_card"
+
+        elif next_step == "fit_card":
+            session["fit_card"] = create_fit_card(
+                session["outfit_suggestion"],
+                session["selected_item"],
+            )
+            next_step = "done"
+
     return session
 
 
