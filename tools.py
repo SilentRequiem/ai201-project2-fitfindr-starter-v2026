@@ -168,8 +168,68 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    items = wardrobe.get("items", [])
+
+    item_details = (
+        f"Item: {new_item['title']}\n"
+        f"Category: {new_item['category']}\n"
+        f"Colors: {', '.join(new_item['colors'])}\n"
+        f"Style tags: {', '.join(new_item['style_tags'])}\n"
+        f"Price: ${new_item['price']:.2f}\n"
+    )
+
+    if not items:
+        prompt = f"""
+    A user is considering this thrifted item:
+
+    {item_details}
+
+    Their wardrobe is empty, so do not pretend they own specific pieces.
+
+    Give one or two practical general outfit ideas for styling this item.
+    Keep the response short and specific.
+    """.strip()
+
+    else:
+        wardrobe_lines = []
+
+        for item in items:
+            wardrobe_lines.append(
+                f"- {item['name']} | "
+                f"category: {item['category']} | "
+                f"colors: {', '.join(item['colors'])} | "
+                f"style: {', '.join(item['style_tags'])}"
+            )
+
+        wardrobe_text = "\n".join(wardrobe_lines)
+
+        prompt = f"""
+    A user is considering this thrifted item:
+
+    {item_details}
+
+    Their current wardrobe contains:
+
+    {wardrobe_text}
+
+    Suggest one or two outfits that combine the new item with pieces they
+    already own. Name the wardrobe pieces you use.
+
+    Keep the response short and practical.
+    """.strip()
+
+    response = generate(
+        prompt,
+        system=(
+            "You are a styling assistant. Recommend wearable outfits using the "
+            "information provided. Do not invent wardrobe items the user does not own."
+        ),
+    )
+
+    if response.strip():
+        return response.strip()
+
+    return "I could not create an outfit suggestion for this item."
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
