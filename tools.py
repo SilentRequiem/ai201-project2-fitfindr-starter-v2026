@@ -23,6 +23,7 @@ the description has to say what is *in* the list.
 import config  # noqa: F401 — you'll use this in search_listings
 from generate import generate
 from utils.data_loader import load_listings
+import re
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
@@ -78,8 +79,63 @@ def search_listings(
     Test it from a terminal before you move on:
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
-    # TODO: replace this with your implementation
-    return []
+    listings = load_listings()
+    matches = []
+
+    # Break the user's description into searchable words.
+    query_words = set(re.findall(r"[a-z0-9]+", description.lower()))
+
+    # Ignore words that do not help identify clothing.
+    stop_words = {
+        "a", "an", "the", "in", "on", "for", "with",
+        "and", "or", "under", "size", "looking", "want"
+    }
+    query_words -= stop_words
+
+    for listing in listings:
+
+        # Price filter
+        if max_price is not None and listing["price"] > max_price:
+            continue
+
+        # Size filter
+        if size is not None:
+            wanted_size = set(
+                re.findall(r"[a-z]+|\d+(?:\.\d+)?", size.lower())
+            )
+
+            listing_size = set(
+                re.findall(r"[a-z]+|\d+(?:\.\d+)?", listing["size"].lower())
+            )
+
+            if not wanted_size.issubset(listing_size):
+                continue
+
+        # Build searchable text from the useful listing fields.
+        searchable = " ".join([
+            listing["title"],
+            listing["description"],
+            listing["category"],
+            " ".join(listing["style_tags"]),
+            " ".join(listing["colors"]),
+            listing["brand"] or "",
+        ]).lower()
+
+        listing_words = set(re.findall(r"[a-z0-9]+", searchable))
+
+        # Count how many requested words appear in this listing.
+        score = len(query_words & listing_words)
+
+        if score > 0:
+            matches.append((score, listing))
+
+    # Best keyword matches first.
+    matches.sort(key=lambda item: item[0], reverse=True)
+
+    return [
+        listing
+        for score, listing in matches[:config.SEARCH_RESULT_LIMIT]
+    ]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
