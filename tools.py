@@ -268,5 +268,43 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
     """
-    # TODO: replace this with your implementation
-    return ""
+
+    if not outfit or not outfit.strip():
+        return "A fit card cannot be created because no outfit suggestion was provided."
+
+    item_title = new_item["title"]
+    price = new_item["price"]
+    platform = new_item["platform"]
+
+    prompt = f"""
+    Create a short social-style fit caption for this thrift find.
+
+    Item: {item_title}
+    Price: ${price:.2f}
+    Platform: {platform}
+
+    Outfit idea:
+    {outfit}
+
+    Requirements:
+    - Write 2 to 4 sentences.
+    - Mention the item once.
+    - Mention the price once.
+    - Mention the platform once.
+    - Mention the overall outfit vibe.
+    - Make it sound like something a person could actually post.
+    - Do not invent facts about the listing.
+    """.strip()
+
+    response = generate(
+        prompt,
+        system=(
+            "You write short, natural thrift-fashion captions. "
+            "Follow the requested facts and keep the caption concise."
+        ),
+    )
+
+    if response.strip():
+        return response.strip()
+
+    return "I could not create a fit card for this item."
