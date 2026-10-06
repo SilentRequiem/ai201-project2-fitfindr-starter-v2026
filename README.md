@@ -13,8 +13,7 @@
 > python app.py ask 'vintage graphic tee under $30'
 > ```
 >
-> All three tools are stubs, so that last command will do nothing useful yet.
-> That's the starting position.
+> The starter begins with all three tools as stubs. This Unit 3 build now implements the three tools and the planning loop.
 >
 > **The rest of this file is your submission.** Fill it in as you go.
 
@@ -39,9 +38,7 @@
 
 ## What This Does
 
-<!-- Three or four sentences: what a user asks for, and what they get back. -->
-
-
+FitFindr is an agent that helps a user find thrift listings based on what they want, including an optional size and maximum price. It searches the listings data, selects a matching item, and uses the user's wardrobe to suggest an outfit. It then creates a short fit card for the thrift find. If the search finds nothing, the agent stops early and tells the user what they can change in their search.
 
 ---
 
@@ -76,37 +73,72 @@
 
 **Where it lives:** `agent.py::run_agent`
 
+**How the query is parsed:** The query is parsed with regular expressions. The agent extracts an optional maximum price and size, removes those parts from the query, and uses the remaining text as the item description.
+
+**What moves through the session:** The parsed search values go into `session["parsed"]`. The results from `search_listings` go into `session["search_results"]`, and the first result goes into `session["selected_item"]`. That selected item is read back from the session by `suggest_outfit`, whose result is stored in `session["outfit_suggestion"]`. Finally, `create_fit_card` reads the outfit suggestion and selected item from the session and stores the result in `session["fit_card"]`.
+
 ---
 
 ## Sample Run
 
-<!-- Two things go here.
-
-     1. One FULL query and its output, pasted as text.
-     2. Your three per-tool terminal tests — the command and what it printed. -->
-
 **One full query**
 
-```
-$ python app.py ask '...'
+```text
+$ python app.py ask 'vintage graphic tee under $30'
 
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   Here is a wearable outfit combining the new Y2K baby tee with pieces from your wardrobe:
+
+**Y2K Streetwear Look**
+*   **Top:** Y2K Baby Tee (Butterfly Print)
+*   **Bottoms:** Baggy straight-leg jeans (dark wash)
+*   **Outerwear:** Vintage black denim jacket
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag
+
+  Fit card: Channeling total Y2K streetwear energy with this butterfly print baby tee. Pair it with dark wash baggy jeans, chunky sneakers, and a vintage black denim jacket for the ultimate nostalgic fit. Grab this cute find for just $18.00 live on Depop now!
+
+2 model calls this session, 597 prompt + 146 output tokens
 ```
 
 **The three tools, tested one at a time**
 
-```
-$ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
+### `search_listings`
 
-```
+```text
+$ python -c "from tools import search_listings; r=search_listings('graphic tee', max_price=30); print([(x['title'], x['price']) for x in r])"
 
-```
-$ python -c "from tools import suggest_outfit; ..."
-
+[('Y2K Baby Tee — Butterfly Print', 18.0), ('Graphic Tee — 2003 Tour Bootleg Style', 24.0), ('Mesh Long-Sleeve Top — Black', 15.0), ('Vintage Band Tee — Faded Grey', 19.0), ('Low-Rise Cargo Pants — Khaki', 27.0), ('Vintage Graphic Hoodie — Faded Black', 26.0)]
 ```
 
-```
-$ python -c "from tools import create_fit_card; ..."
+### `suggest_outfit`
 
+```text
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
+
+Here are two practical outfit ideas using the new Vintage Levi's 501 Jeans and items from your current wardrobe:
+
+**Outfit 1: Casual Streetwear**
+*   **Bottoms:** Vintage Levi's 501 Jeans (Medium Wash)
+*   **Tops:** White ribbed tank top
+*   **Outerwear:** Vintage black denim jacket
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag
+
+**Outfit 2: Cozy & Classic**
+*   **Bottoms:** Vintage Levi's 501 Jeans (Medium Wash)
+*   **Tops:** Oversized grey crewneck sweatshirt
+*   **Shoes:** Black combat boots
+*   **Accessories:** Brown leather belt, Black crossbody bag
+```
+
+### `create_fit_card`
+
+```text
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('Pair these jeans with a white tank, black denim jacket, and chunky white sneakers for a casual streetwear look.', load_listings()[0]))"
+
+Nothing beats the fit of broken-in vintage Levi's 501 jeans, and this medium wash pair is a total closet staple. Grab them on Depop for just $38.00 before they're gone. Throw them on with a simple white tank, a black denim jacket, and chunky sneakers for the ultimate casual streetwear vibe.
 ```
 
 ---
@@ -122,15 +154,15 @@ $ python -c "from tools import create_fit_card; ..."
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked AI for help designing `search_listings`, especially how to handle sizes without using unsafe substring matching.
+- *What came back:* It suggested splitting sizes into tokens so a request for `M` can match `S/M` without making `L` automatically match `XL`.
+- *What I changed:* I used token-based size matching and then tested the search against the real listing data, including the maximum-price filter and an impossible query.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked AI for help wiring the three tools into a planning loop while keeping the tool results visible in session state.
+- *What came back:* It suggested storing each result in the session and using a branch after `search_listings` so an empty result stops the run before the model tools are called.
+- *What I changed:* I implemented the branch in `agent.py::run_agent`, kept the selected listing and later outputs in the session, and tested both a successful query and an impossible query. The impossible query stopped with `fit_card` still set to `None`.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
