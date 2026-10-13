@@ -328,11 +328,15 @@ def generate(
                 or "resource" in message and "exhaust" in message
                 or "rate" in message and "limit" in message
             )
-            if not rate_limited:
+            # Unit 4: temporary provider overload can recover within our existing
+            # bounded retry budget, just like a rate limit.
+            temporarily_unavailable = "503" in message and "unavailable" in message
+            if not (rate_limited or temporarily_unavailable):
                 raise ModelUnavailable(_explain(exc)) from exc
             backoff = _retry_delay(exc, attempt)
             print(
-                f"  [rate limit] service pushed back. Waiting {backoff:.0f}s "
+                f"  [{'model unavailable' if temporarily_unavailable else 'rate limit'}] "
+                f"service pushed back. Waiting {backoff:.0f}s "
                 f"(attempt {attempt + 1} of {config.MAX_RETRIES}). This is "
                 f"the limiter doing its job, not a bug.",
                 file=sys.stderr,
@@ -340,7 +344,10 @@ def generate(
             )
             time.sleep(backoff)
 
+    if "503" in str(last_error).lower() and "unavailable" in str(last_error).lower():
+        raise ModelUnavailable(_explain(last_error)) from last_error
+
     raise RuntimeError(
-        f"Still rate limited after {config.MAX_RETRIES} attempts. Wait a "
+        f"Still rate limited or unavailable after {config.MAX_RETRIES} attempts. Wait a "
         f"minute and try again — your key is fine.\nLast error: {last_error}"
     )
