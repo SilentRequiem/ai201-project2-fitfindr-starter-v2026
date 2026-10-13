@@ -245,14 +245,31 @@ that produced it:
 
 **Happy path**
 
-```
+```text
+$ python app.py ask 'vintage graphic tee under $30' --trace
 
-```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[2] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here is a wearable outfit combining the new Y2K baby tee with pieces from your wardrobe:  **Y2K Streetwear Loo…
+[3] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Channeling total Y2K streetwear energy with this butterfly print baby tee. Pair it with dark wash baggy jeans,…
 
 **Empty search**
 
 ```
+$ python app.py ask 'designer ballgown size XXS under $5' --trace
 
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+
+I couldn't find a matching listing. Try a broader description, another size, or a higher maximum price.
+
+0 model calls this session
 ```
 
 **On the MCP move:** <!-- what changed in your code, and whether anything
