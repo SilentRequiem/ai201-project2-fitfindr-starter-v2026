@@ -164,6 +164,10 @@ Nothing beats the fit of broken-in vintage Levi's 501 jeans, and this medium was
 - *What came back:* It suggested storing each result in the session and using a branch after `search_listings` so an empty result stops the run before the model tools are called.
 - *What I changed:* I implemented the branch in `agent.py::run_agent`, kept the selected listing and later outputs in the session, and tested both a successful query and an impossible query. The impossible query stopped with `fit_card` still set to `None`.
 
+**Unit 4 assistance**
+
+I asked Codex to inspect the current repository, preserve Unit 3, and finish testing. The MCP wiring and failure handling/tracing were already implemented in commits `de0aca8` and `50e7ffd`; this assistance inspected and verified them rather than rewriting them. Earlier AI help with those steps is not independently documented in this session, so I do not attribute their authorship to this run. Codex verified the MCP schema and fresh traces, retained the existing failure handlers, adopted the suggested session ID and complete search-price instrumentation, and retained my current evaluation scenarios. It collected real uncached BEFORE evidence, scored each criterion, and diagnosed the provider's 503 errors. I adopted one suggested improvement: bounded retries for temporary 503 responses. Codex ran the same AFTER evaluation and helped prepare this evidence and documentation. Existing Unit 3 AI entries above are preserved. Human review should confirm the scoring and that this reflects my understanding before I submit.
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
@@ -426,6 +430,8 @@ $ python app.py ask 'vintage graphic tee under $30' --trace
       in:  dict with keys: outfit, new_item
       out: Channeling total Y2K streetwear energy with this butterfly print baby tee. Pair it with dark wash baggy jeans,…
 
+```
+
 **Empty search**
 
 ```
@@ -440,12 +446,9 @@ I couldn't find a matching listing. Try a broader description, another size, or 
 0 model calls this session
 ```
 
-**On the MCP move:** <!-- what changed in your code, and whether anything
-behaved differently afterwards. If the rewire didn't work, say exactly where it
-broke — the error text and the last thing that worked. That earns the point in
-full. -->
+**On the MCP move:** `agent.py::run_agent` now calls `mcp_client.call_tool("search_listings", arguments)` instead of the direct local function. `mcp_server.py` exposes exactly one tool, wrapping the existing `tools.py::search_listings` implementation. The typed protocol call changes the call shape; the returned listing dictionaries and downstream selection/branch behavior remain the same. `python mcp_client.py` verified the sole tool and description/string, optional size/string, and optional max_price/number inputs. Both traces above were already observed before this assistance; the fresh evaluation traces corroborate the same branches.
 
-
+**Failure modes:** Empty search stops before either model tool (five fresh BEFORE tries); empty wardrobe produces general styling advice and fit cards (five fresh BEFORE tries). The user previously triggered and observed the invalid-key error, restored the real key, and supplied its output. This assistance did not alter the key. Real 503 failures in the BEFORE evidence also demonstrate the existing unavailable-model handlers.
 
 ---
 
@@ -456,36 +459,235 @@ full. -->
 
      `python run_eval.py --label after` -->
 
-**What I changed:**
+**What I changed:** One behavioral improvement in `generate.py::generate`: retry a provider 503 UNAVAILABLE response using the existing five-attempt budget, backoff, and request pacing. If all attempts fail, raise `ModelUnavailable` so the existing agent handler still stops cleanly. Other non-rate-limit errors still stop immediately. No changes to prompts, listing ranking, search filters, model, temperature, or data.
 
-**Which failure it was meant to fix:**
+**Which failure it was meant to fix:** The BEFORE run had four early exits caused by temporary provider overload: Criterion 1 try 5 and Criterion 3 tries 2, 4, and 5. The adapter previously only retried 429/rate-limit errors. A short, bounded retry gives transient overload a chance to recover; persistent outages still fail honestly. All original targets were met, so this addresses observed failed runs without manufacturing a missed criterion.
+
+**Verification:** Compilation passed. Mocked adapter checks passed for 503 then success (two calls), persistent 503 (exactly five calls then `ModelUnavailable`), and key rejection (one call). These diagnostic checks do not replace the real AFTER evaluation.
 
 ### Run Log — After
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. matching query completes | 4/5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. impossible query stops early | 5/5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. selected item stays the same through state | 5/5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. fit card includes listing details | 4/5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. search respects maximum price | 5/5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Did it help, and how do I know:**
+Full evidence: [run_2026-10-13_0244_after.md](results/run_2026-10-13_0244_after.md). Same `scenarios.py`, five tries, original targets, model, data, temperature, and caching off. Provenance: `run_eval.py::main` / `write_report` → `agent.py::run_agent`; search via MCP wraps `tools.py::search_listings`, then `tools.py::suggest_outfit` and `create_fit_card`.
 
-<!-- If it made things worse, say that. Honestly reported, that earns full
-     credit and is more interesting than one that worked. -->
+#### Criterion 1: real AFTER Try 1 output
 
+- stopped early: no
+- selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+- search_results: 10
+- selected_item_id: lst_002
+- suggest_outfit_item_id: lst_002
+- search_result_prices: [18.0, 24.0, 19.0, 26.0, 15.0, 22.0, 27.0, 20.0, 30.0, 12.0]
 
+Outfit suggestion:
 
----
+```
+Here are two ways to style the Y2K butterfly baby tee using items from your current wardrobe:
+
+**Outfit 1: Casual Y2K Streetwear**
+*   **Top:** Y2K Baby Tee — Butterfly Print
+*   **Bottoms:** Baggy straight-leg jeans (dark wash)
+*   **Outerwear:** Black cropped zip hoodie
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag
+
+**Outfit 2: Contrast Mix (Y2K meets Minimal)**
+*   **Top:** Y2K Baby Tee — Butterfly Print
+*   **Bottoms:** Wide-leg khaki trousers
+*   **Accessories:** Brown leather belt, Black crossbody bag
+*   **Shoes:** Chunky white sneakers
+```
+
+Fit card:
+
+```
+Channel your inner 2000s icon with this Y2K butterfly baby tee, available now on Depop for just $18. Style it with baggy denim and a zip hoodie for effortless streetwear vibes, or dress it down with wide-leg trousers for a cool contrast mix. Grab it before it's gone!
+```
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[2] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here are two ways to style the Y2K butterfly baby tee using items from your current wardrobe:  **Outfit 1: Cas…
+[3] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Channel your inner 2000s icon with this Y2K butterfly baby tee, available now on Depop for just $18. Style it …
+```
+
+#### Criterion 2: real AFTER Try 1 output
+
+- stopped early: yes — I couldn't find a matching listing. Try a broader description, another size, or a higher maximum price.
+- selected_item: (none)
+- search_results: 0
+- selected_item_id: None
+- suggest_outfit_item_id: None
+- search_result_prices: []
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+```
+
+#### Criterion 3: real AFTER Try 1 output
+
+- stopped early: no
+- selected_item: 90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+- search_results: 4
+- selected_item_id: lst_004
+- suggest_outfit_item_id: lst_004
+- search_result_prices: [45.0, 75.0, 30.0, 33.0]
+
+Outfit suggestion:
+
+```
+Here are two practical outfit ideas using the 90s track jacket and pieces from your current wardrobe:
+
+**Outfit 1: Casual Streetwear**
+*   **Outerwear:** 90s Track Jacket (Navy/White Stripe)
+*   **Top:** White ribbed tank top
+*   **Bottoms:** Baggy straight-leg jeans (dark wash)
+*   **Accessories:** Black crossbody bag
+*   **Shoes:** Chunky white sneakers
+
+**Outfit 2: Sporty Minimalist**
+*   **Outerwear:** 90s Track Jacket (Navy/White Stripe)
+*   **Bottoms:** Wide-leg khaki trousers
+*   **Accessories:** Brown leather belt, Black crossbody bag
+*   **Shoes:** Chunky white sneakers
+```
+
+Fit card:
+
+```
+Channel ultimate casual streetwear or sporty minimalist vibes with this vintage 90s track jacket. It is super versatile for styling with your everyday denim or trousers. Grab this piece now on Poshmark for just $45.00!
+```
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 4 items: 90s Track Jacket — Navy/White Stripe, 90s Leather Bomber — Black, 90s Silk Slip Dress — Floral, Midi Length … +1 more
+[2] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here are two practical outfit ideas using the 90s track jacket and pieces from your current wardrobe:  **Outfi…
+[3] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Channel ultimate casual streetwear or sporty minimalist vibes with this vintage 90s track jacket. It is super …
+```
+
+#### Criterion 4: real AFTER Try 1 output
+
+- stopped early: no
+- selected_item: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+- search_results: 7
+- selected_item_id: lst_007
+- suggest_outfit_item_id: lst_007
+- search_result_prices: [42.0, 38.0, 45.0, 24.0, 33.0, 30.0, 27.0]
+
+Outfit suggestion:
+
+```
+Here are two wearable outfits using the new light wash cropped denim jacket and items from your current wardrobe:
+
+**Outfit 1: Casual Streetwear (Double Denim)**
+* **Top:** White ribbed tank top
+* **Bottoms:** Baggy straight-leg jeans (dark wash)
+* **Shoes:** Chunky white sneakers
+* **Accessories:** Black crossbody bag
+
+**Outfit 2: High-Low Contrast**
+* **Top:** Oversized grey crewneck sweatshirt
+* **Bottoms:** Wide-leg khaki trousers
+* **Shoes:** Black combat boots
+* **Accessories:** Brown leather belt and black crossbody bag
+```
+
+Fit card:
+
+```
+Scored this light wash cropped denim jacket for just $42.00 on Poshmark! It’s giving effortless, everyday streetwear vibes that make double denim and high-low styling so easy. Can't wait to mix and match this piece with everything already in my closet.
+```
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 7 items: Denim Jacket — Light Wash, Cropped, Vintage Levi's 501 Jeans — Medium Wash, 90s Track Jacket — Navy/White Stripe … +4 more
+[2] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here are two wearable outfits using the new light wash cropped denim jacket and items from your current wardro…
+[3] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Scored this light wash cropped denim jacket for just $42.00 on Poshmark! It’s giving effortless, everyday stre…
+```
+
+#### Criterion 5: real AFTER Try 1 output
+
+- stopped early: no
+- selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+- search_results: 10
+- selected_item_id: lst_002
+- suggest_outfit_item_id: lst_002
+- search_result_prices: [18.0, 22.0, 24.0, 20.0, 12.0, 24.0, 16.0, 18.0, 21.0, 25.0]
+
+Outfit suggestion:
+
+```
+Here is a wearable outfit combining the Y2K butterfly baby tee with pieces from your wardrobe:
+
+**Y2K Streetwear Look**
+*   **Top:** Y2K Baby Tee — Butterfly Print
+*   **Bottoms:** Baggy straight-leg jeans (dark wash)
+*   **Outerwear:** Black cropped zip hoodie
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag
+
+This look balances the fitted, feminine silhouette of the baby tee with the baggy streetwear style of your dark wash jeans, tied together with the cropped hoodie and chunky sneakers.
+```
+
+Fit card:
+
+```
+Channeling major Y2K streetwear energy with this adorable butterfly print baby tee. Pair it with baggy dark-wash jeans and a cropped hoodie for the ultimate effortless fit. Grab this gem on Depop right now for just $18.
+```
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Oversized Flannel Shirt — Plaid Red/Black, Graphic Tee — 2003 Tour Bootleg Style … +7 more
+[2] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here is a wearable outfit combining the Y2K butterfly baby tee with pieces from your wardrobe:  **Y2K Streetwe…
+[3] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Channeling major Y2K streetwear energy with this adorable butterfly print baby tee. Pair it with baggy dark-wa…
+```
+
+**Did it help, and how do I know:** Criterion 1 improved from 4/5 to 5/5; Criteria 2–5 remained 5/5. Across the 25 matching-query runs (including the empty-wardrobe diagnostic), completion improved from 21/25 to 25/25. BEFORE had four early exits on 503 responses; AFTER had none. The AFTER adapter counted exactly 50 model calls for 25 two-model-call runs, with no 503 retry messages, so this run did not exercise live 503 recovery. Provider availability may simply have improved. The mocked recovery and exhaustion checks establish that the retry mechanism works; the real comparison establishes better observed completion, not proof that retries caused it. No criterion regressed. BEFORE used 49 model calls and 13,582 prompt + 4,552 output tokens; AFTER used 50 calls and 14,959 prompt + 4,871 output tokens. Failed requests can count as calls without reported tokens.
 
 ## What's Still Broken
 
-<!-- For each criterion still missed: what you'd do, and why you stopped where
-     you did. "I ran out of time" is fine if it's true. Pretending nothing is
-     left is not. -->
+No original criterion remains MISSED. The agent is not perfect: transient provider errors appeared in BEFORE, persistent outages can still exhaust the five-attempt limit, and retries add latency and request cost. Both evaluations repeat only one query per criterion. Search is keyword overlap, so it can return listings matching only some words; the observed denim-jacket search also returns jeans and a track jacket. Generated captions sometimes add unsupported sales urgency or first-person ownership claims (for example BEFORE Criterion 4 try 5 says to check out “my Poshmark closet”). Those claims are outside the five existing criteria and remain unfixed. Next I would test broader search relevance and factual caption grounding, then separately measure a targeted change. I stopped after one behavioral improvement to keep this Unit 4 comparison honest and within the assignment scope.
 
-
+Human review: check the PASS/FAIL judgments, especially semantic item mentions and equivalent prices ($42 and $42.00), confirm the AI-use account and earlier user-reported invalid-key test, and review the unchanged Unit 3 criteria before submitting the repository URL. No assignment was submitted externally.
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
