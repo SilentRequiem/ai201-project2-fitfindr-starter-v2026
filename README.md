@@ -448,7 +448,13 @@ I couldn't find a matching listing. Try a broader description, another size, or 
 
 **On the MCP move:** `agent.py::run_agent` now calls `mcp_client.call_tool("search_listings", arguments)` instead of the direct local function. `mcp_server.py` exposes exactly one tool, wrapping the existing `tools.py::search_listings` implementation. The typed protocol call changes the call shape; the returned listing dictionaries and downstream selection/branch behavior remain the same. `python mcp_client.py` verified the sole tool and description/string, optional size/string, and optional max_price/number inputs. Both traces above were already observed before this assistance; the fresh evaluation traces corroborate the same branches.
 
-**Failure modes:** Empty search stops before either model tool (five fresh BEFORE tries); empty wardrobe produces general styling advice and fit cards (five fresh BEFORE tries). The user previously triggered and observed the invalid-key error, restored the real key, and supplied its output. This assistance did not alter the key. Real 503 failures in the BEFORE evidence also demonstrate the existing unavailable-model handlers.
+**Failure modes:** Empty search stops before either model tool (five fresh BEFORE tries); empty wardrobe produces general styling advice and fit cards (five fresh BEFORE tries). The invalid-key test was also triggered manually, then the real key was restored. The exact observed message was:
+
+```text
+The styling model couldn't be reached. The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com. Check your API key or internet connection and try again.
+```
+
+Real 503 failures in the BEFORE evidence also demonstrate the existing unavailable-model handlers.
 
 ---
 
