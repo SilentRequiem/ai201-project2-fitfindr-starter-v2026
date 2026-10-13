@@ -173,61 +173,229 @@ Nothing beats the fit of broken-in vintage Levi's 501 jeans, and this medium was
 
 ## Run Log — Before
 
-<!-- Five criteria, five tries each, in this exact format.
-
-     Five, because your criteria are written out of five. Mark each try PASS
-     or FAIL, count the passes, and read that count against your target — a
-     row targeting 4 of 5 with three PASS cells is MISSED (3/5).
-
-     `python run_eval.py --label before` runs everything and writes the table
-     into results/. Paste it here and fill in the verdicts. -->
-
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. matching query completes | 4/5 | PASS | PASS | PASS | PASS | FAIL | MET (4/5) |
+| 2. impossible query stops early | 5/5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. selected item stays the same through state | 5/5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. fit card includes listing details | 4/5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. search respects maximum price | 5/5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Real output from one try**, pasted as text, naming the file and function
-that produced it:
+Full evidence: [run_2026-10-13_0230_before.md](results/run_2026-10-13_0230_before.md). Produced by `run_eval.py::main` / `write_report`, loop `agent.py::run_agent`, model tools `tools.py`, search through `mcp_client.call_tool` → `mcp_server.py::search_listings` → `tools.py::search_listings`. Caching off, five tries, unchanged model/data/temperature (0.9). Report timestamps use the host clock; this work occurred October 13, 2026 in America/New_York.
+
+### Criterion 1: real Try 1 output
+
+- stopped early: no
+- selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+- search_results: 10
+- selected_item_id: lst_002
+- suggest_outfit_item_id: lst_002
+- search_result_prices: [18.0, 24.0, 19.0, 26.0, 15.0, 22.0, 27.0, 20.0, 30.0, 12.0]
+
+Outfit suggestion:
 
 ```
+Here is an outfit combining the Y2K baby tee with pieces from your wardrobe:
 
+**Y2K Streetwear Look**
+* **Top:** Y2K Baby Tee — Butterfly Print
+* **Bottoms:** Baggy straight-leg jeans (dark wash)
+* **Outerwear:** Vintage black denim jacket
+* **Shoes:** Chunky white sneakers
+* **Accessories:** Black crossbody bag
+
+This look balances the fitted, feminine silhouette of the baby tee with the relaxed, baggy fit of the dark-wash jeans, leaning into a classic Y2K streetwear aesthetic.
 ```
 
----
+Fit card:
+
+```
+Channeling ultimate Y2K streetwear energy with this butterfly print baby tee. Pair it with baggy dark-wash jeans and a vintage denim jacket for the complete look. Grab this Y2K baby tee for $18.00 on Depop before it's gone!
+```
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[2] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here is an outfit combining the Y2K baby tee with pieces from your wardrobe:  **Y2K Streetwear Look** * **Top:…
+[3] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Channeling ultimate Y2K streetwear energy with this butterfly print baby tee. Pair it with baggy dark-wash jea…
+```
+
+### Criterion 2: real Try 1 output
+
+- stopped early: yes — I couldn't find a matching listing. Try a broader description, another size, or a higher maximum price.
+- selected_item: (none)
+- search_results: 0
+- selected_item_id: None
+- suggest_outfit_item_id: None
+- search_result_prices: []
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+```
+
+### Criterion 3: real Try 1 output
+
+- stopped early: no
+- selected_item: 90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+- search_results: 4
+- selected_item_id: lst_004
+- suggest_outfit_item_id: lst_004
+- search_result_prices: [45.0, 75.0, 30.0, 33.0]
+
+Outfit suggestion:
+
+```
+Here is a practical, streetwear-inspired outfit combining the 90s track jacket with pieces from your wardrobe:
+
+**The 90s Streetwear Look**
+*   **Outerwear:** 90s Track Jacket (Navy/White Stripe)
+*   **Top:** White ribbed tank top
+*   **Bottoms:** Baggy straight-leg jeans (dark wash)
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag
+
+**Why it works:** Layering the track jacket unzipped over the fitted white ribbed tank creates a balanced silhouette with the baggy dark wash jeans. Finishing the look with chunky white sneakers and the black crossbody bag leans right into the vintage athletic aesthetic.
+```
+
+Fit card:
+
+```
+Channeling major 90s streetwear energy with this navy and white stripe track jacket! Pair it with a ribbed tank, baggy jeans, and chunky sneakers for the ultimate vintage athletic vibe. Snag this piece over on Poshmark for just $45.00 before someone else does.
+```
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 4 items: 90s Track Jacket — Navy/White Stripe, 90s Leather Bomber — Black, 90s Silk Slip Dress — Floral, Midi Length … +1 more
+[2] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here is a practical, streetwear-inspired outfit combining the 90s track jacket with pieces from your wardrobe:…
+[3] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Channeling major 90s streetwear energy with this navy and white stripe track jacket! Pair it with a ribbed tan…
+```
+
+### Criterion 4: real Try 1 output
+
+- stopped early: no
+- selected_item: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+- search_results: 7
+- selected_item_id: lst_007
+- suggest_outfit_item_id: lst_007
+- search_result_prices: [42.0, 38.0, 45.0, 24.0, 33.0, 30.0, 27.0]
+
+Outfit suggestion:
+
+```
+Here are two wearable outfit ideas combining the new light wash cropped denim jacket with pieces from your current wardrobe:
+
+**Outfit 1: Casual Streetwear**
+*   **Outerwear:** Denim Jacket — Light Wash, Cropped
+*   **Top:** White ribbed tank top
+*   **Bottoms:** Baggy straight-leg jeans, dark wash
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag
+*   *Why it works:* A classic double-denim look with contrasting light and dark washes, balanced by a fitted tank and casual sneakers.
+
+**Outfit 2: High-Low Contrast**
+*   **Outerwear:** Denim Jacket — Light Wash, Cropped
+*   **Top:** Oversized grey crewneck sweatshirt
+*   **Bottoms:** Wide-leg khaki trousers
+*   **Shoes:** Black combat boots
+*   **Accessories:** Brown leather belt, black crossbody bag
+*   *Why it works:* Layering the cropped jacket over the oversized sweatshirt creates a cool proportion play, paired with minimal trousers and edgy boots.
+```
+
+Fit card:
+
+```
+Scored this light wash cropped denim jacket for just $42.00 over on Poshmark! It’s giving effortless streetwear and high-low contrast vibes that go with literally everything in my closet. Grab it before I change my mind!
+```
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 7 items: Denim Jacket — Light Wash, Cropped, Vintage Levi's 501 Jeans — Medium Wash, 90s Track Jacket — Navy/White Stripe … +4 more
+[2] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here are two wearable outfit ideas combining the new light wash cropped denim jacket with pieces from your cur…
+[3] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Scored this light wash cropped denim jacket for just $42.00 over on Poshmark! It’s giving effortless streetwea…
+```
+
+### Criterion 5: real Try 1 output
+
+- stopped early: no
+- selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+- search_results: 10
+- selected_item_id: lst_002
+- suggest_outfit_item_id: lst_002
+- search_result_prices: [18.0, 22.0, 24.0, 20.0, 12.0, 24.0, 16.0, 18.0, 21.0, 25.0]
+
+Outfit suggestion:
+
+```
+Here is a wearable outfit combining the new Y2K butterfly baby tee with pieces from your current wardrobe:
+
+**Y2K Streetwear Casual**
+*   **Top:** Y2K Baby Tee (Butterfly Print)
+*   **Bottoms:** Baggy straight-leg jeans (dark wash)
+*   **Outerwear:** Black cropped zip hoodie
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag
+
+This look balances the fitted, feminine silhouette of the baby tee with the relaxed, baggy fit of your dark wash jeans, tied together with the cropped hoodie and chunky sneakers for an easy Y2K-inspired streetwear vibe.
+```
+
+Fit card:
+
+```
+Serving major Y2K streetwear vibes with this adorable butterfly print baby tee. Pair it with baggy dark denim and chunky sneakers for the ultimate casual look. Grab this gem now on Depop for just $18.00!
+```
+
+Trace:
+
+```
+[1] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Oversized Flannel Shirt — Plaid Red/Black, Graphic Tee — 2003 Tour Bootleg Style … +7 more
+[2] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here is a wearable outfit combining the new Y2K butterfly baby tee with pieces from your current wardrobe:  **…
+[3] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Serving major Y2K streetwear vibes with this adorable butterfly print baby tee. Pair it with baggy dark denim …
+```
 
 ## Verdicts and Diagnoses
 
-<!-- MET or MISSED per criterion against LAST UNIT's target, plus a sentence on
-     how you decided.
+| # | Target | Verdict | Evidence and decision |
+|---|---|---|---|
+| 1 | 4/5 | MET (4/5) | Tries 1–4 completed all three tools and produced non-empty cards; try 5 stopped at a 503 before a card. Four passes meet 4/5. |
+| 2 | 5/5 | MET (5/5) | All searches returned []; each trace stops after MCP search and the error names description, size, and price changes. Five passes meet 5/5. |
+| 3 | 5/5 | MET (5/5) | All five selected IDs and actual outfit argument IDs equal lst_004, including runs whose model failed. Five passes meet 5/5; this criterion measures transfer, not completion. |
+| 4 | 4/5 | MET (5/5) | All five successful cards identify the light wash cropped denim jacket, $42.00, and Poshmark. Natural wording and platform capitalization are allowed by the criterion. Five passes exceed 4/5. |
+| 5 | 5/5 | MET (5/5) | All ten returned prices in each try are at most $25, including the $25 boundary. Five passes meet 5/5. |
 
-     Then, for every miss: which of the four places it happened — a tool, the
-     loop's branch, the session, or the model's output — AND the mechanism.
+**Diagnoses:** No criterion missed its original target. Nevertheless, Criterion 1 try 5 and Criterion 3 tries 2, 4, and 5 stopped at real Gemini 503 UNAVAILABLE responses. The failure location is the model call in `generate.py::generate`, reached from `suggest_outfit` or `create_fit_card`. Mechanism: the provider reports temporary high demand; the adapter only retries rate limits, so a transient 503 immediately becomes `ModelUnavailable`. Search and session transfer remained correct. This shared pattern supports one bounded 503 retry improvement.
 
-     Not a diagnosis:  "The fit card was bad."
-     A diagnosis:      "The fit card criterion missed on 2 of 5 items. Both had
-                        an empty brand field. My prompt puts the brand in the
-                        first sentence, so the card opened with a blank and read
-                        like a fragment. The tool worked; the prompt assumed a
-                        field that isn't always there."
-
-     Look for a pattern. Three misses on the same tool is one problem, not
-     three. -->
-
-| # | Criterion | Target | Verdict | How I decided |
-|---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
-
-**Diagnoses**
-
-
+**Were the targets too easy?** The deterministic state and budget tests repeat the same input, and matching-query completion only covers one query. In a future evaluation I would tighten Criterion 1 to require completion across five distinct matching queries, including size and price boundaries. The original criteria and this before/after comparison remain unchanged.
 
 ---
 
