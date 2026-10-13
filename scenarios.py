@@ -15,38 +15,49 @@ own criteria need — these are a starting point, not a fixed set.
 
 SCENARIOS = [
     {
-        # A query the data can match. Criterion 1.
+        # Criterion 1: a matching query should complete all three tools.
         "name": "matching query completes",
         "query": "vintage graphic tee under $30",
         "wardrobe": "example",
         "criterion": 1,
     },
     {
-        # A query nothing can match. Criterion 2 — the branch.
+        # Criterion 2: an impossible query should stop before tool 2.
         "name": "impossible query stops early",
         "query": "designer ballgown size XXS under $5",
         "wardrobe": "example",
         "criterion": 2,
     },
     {
-        # A user with nothing saved. One of unit 4's three failure modes.
+        # Required Unit 4 failure-mode check, not one of our five criteria.
         "name": "empty wardrobe",
         "query": "denim jacket under $50",
         "wardrobe": "empty",
         "criterion": None,
     },
-    # TODO: add what your criteria 3, 4 and 5 need.
-    #
-    # Set "criterion" to the number in criteria.md that the scenario tests.
-    # "criterion": None means a diagnostic run — useful to have, but it isn't
-    # one of your five, and run_eval.py marks it as such in the table.
-    #
-    # For a state criterion, any normal query works — what you're checking is
-    # what ends up in the session, not what the user typed.
-    #
-    # For a fit-card criterion, you probably want the SAME query listed more
-    # than once, or several different items, depending on what your criterion
-    # actually says.
+    {
+        # Criterion 3: the selected item's ID should be the same item
+        # passed into suggest_outfit.
+        "name": "selected item stays the same through state",
+        "query": "90s track jacket in size M",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        # Criterion 4: the fit card should mention the selected item,
+        # price, and platform.
+        "name": "fit card includes listing details",
+        "query": "denim jacket under $50",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        # Criterion 5: every search result should respect max_price.
+        "name": "search respects maximum price",
+        "query": "vintage under $25",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
 ]
 
 WARDROBES = ("example", "empty")
@@ -55,12 +66,15 @@ WARDROBES = ("example", "empty")
 def validate() -> list[str]:
     """Complain about anything malformed, before a long run rather than during."""
     problems = []
+
     for i, scenario in enumerate(SCENARIOS, 1):
         if not scenario.get("query", "").strip():
             problems.append(f"scenario {i} has no query")
+
         if scenario.get("wardrobe") not in WARDROBES:
             problems.append(
                 f"scenario {i} has wardrobe {scenario.get('wardrobe')!r} — "
                 f"it should be one of {WARDROBES}"
             )
+
     return problems
